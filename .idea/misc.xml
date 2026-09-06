@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/loadbalancer-demo/server1/pom.xml" />
+        <option value="$PROJECT_DIR$/loadbalancer-demo/server2/pom.xml" />
+        <option value="$PROJECT_DIR$/loadbalancer-demo/server3/pom.xml" />
+        <option value="$PROJECT_DIR$/ReverseProxy/pom.xml" />
+        <option value="$PROJECT_DIR$/reverse-proxy/pom.xml" />
+        <option value="$PROJECT_DIR$/loadbalancerReverse/pom.xml" />
+      </list>
+    </option>
+    <option name="ignoredFiles">
+      <set>
+        <option value="$PROJECT_DIR$/ReverseProxy/pom.xml" />
+        <option value="$PROJECT_DIR$/loadbalancer-demo/server1/loadbalancer/pom.xml" />
+        <option value="$PROJECT_DIR$/loadbalancer-demo/server1/reverseProxy/pom.xml" />
+      </set>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="openjdk-26 (2)" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+</project>

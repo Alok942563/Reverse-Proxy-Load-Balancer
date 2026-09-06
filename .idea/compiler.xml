@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="server3" />
+        <module name="server2" />
+        <module name="server1" />
+        <module name="loadbalancerReverse" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="loadbalancer" target="26" />
+      <module name="reverseProxy" target="26" />
+      <module name="reverseProxy (1)" target="25" />
+      <module name="ReverseProxy (2)" target="26" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="loadbalancerReverse" options="-parameters" />
+      <module name="reverseProxy" options="-parameters" />
+      <module name="reverseProxy (1)" options="-parameters" />
+      <module name="server1" options="-parameters" />
+      <module name="server2" options="-parameters" />
+      <module name="server3" options="-parameters" />
+    </option>
+  </component>
+</project>
