@@ -91,7 +91,7 @@ public class ReverseProxyController {
                 lastSelectedServer = index;
 
                 System.out.println(
-                        "LEAST CONNECTION CHECK -> " +
+                        "LEAST CONECTION CHECK -> " +
                                 "S1=" + activeConnections[0].get() +
                                 " S2=" + activeConnections[1].get() +
                                 " S3=" + activeConnections[2].get() +
