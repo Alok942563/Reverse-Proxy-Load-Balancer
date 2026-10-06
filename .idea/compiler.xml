@@ -7,6 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="server3" />
+        <module name="Loadtester.java" />
         <module name="server2" />
         <module name="server1" />
         <module name="loadbalancerReverse" />

@@ -10,6 +10,7 @@
         <option value="$PROJECT_DIR$/ReverseProxy/pom.xml" />
         <option value="$PROJECT_DIR$/reverse-proxy/pom.xml" />
         <option value="$PROJECT_DIR$/loadbalancerReverse/pom.xml" />
+        <option value="$PROJECT_DIR$/Loadtester.java/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">

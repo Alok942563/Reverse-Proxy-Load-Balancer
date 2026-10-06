@@ -1,13 +1,20 @@
 package com.reverse;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
+@CrossOrigin(origins = "*") // allows the browser dashboard / stats graph pages to call this
 public class ReverseProxyController {
 
     private final WebClient webClient = WebClient.create();
@@ -43,28 +50,62 @@ public class ReverseProxyController {
     // Used by Weighted Round Robin
     private int weightedIndex = 0;
 
+    // One circuit breaker per backend server
+    private final CircuitBreaker[] breakers = {
+            new CircuitBreaker(),
+            new CircuitBreaker(),
+            new CircuitBreaker()
+    };
+
+    // Per-client rate limiter (keyed by IP)
+    private final RateLimiter rateLimiter = new RateLimiter();
+
+    // Total requests rejected by the rate limiter (for stats/demo)
+    private final AtomicInteger rateLimitedCount = new AtomicInteger(0);
+
+    // Total requests rejected because every server's breaker was OPEN
+    private final AtomicInteger allServersDownCount = new AtomicInteger(0);
+
 
     // =========================================================
     // MAIN LOAD BALANCER ENDPOINT
     // =========================================================
 
     @GetMapping("/hello")
-    public String hello(
-            @RequestParam(defaultValue = "wrr") String algorithm) {
+    public ResponseEntity<String> hello(
+            @RequestParam(defaultValue = "wrr") String algorithm,
+            HttpServletRequest httpRequest) {
+
+        // ---- Rate limiting: check BEFORE doing anything else ----
+        String clientId = httpRequest.getRemoteAddr();
+
+        if (!rateLimiter.allowRequest(clientId)) {
+            rateLimitedCount.incrementAndGet();
+            return ResponseEntity.status(429).body("Too Many Requests — slow down (" + clientId + ")");
+        }
 
         int requestNumber = totalRequests.incrementAndGet();
 
         int selectedServer;
 
         if (algorithm.equalsIgnoreCase("least")) {
-
-            // Least Connections
             selectedServer = selectLeastConnectionServer();
-
         } else {
-
-            // Weighted Round Robin
             selectedServer = selectWeightedServer();
+        }
+
+        // ---- Circuit breaker: skip this server if its breaker is OPEN ----
+        // Try up to servers.length times to find one that's allowed
+        int attempts = 0;
+        while (!breakers[selectedServer].allowRequest() && attempts < servers.length) {
+            selectedServer = (selectedServer + 1) % servers.length;
+            attempts++;
+        }
+
+        if (!breakers[selectedServer].allowRequest()) {
+            // every server's breaker is OPEN — nothing we can do
+            allServersDownCount.incrementAndGet();
+            return ResponseEntity.status(503).body("All backend servers are currently unavailable (circuit breakers OPEN)");
         }
 
         // Increase request count
@@ -82,23 +123,39 @@ public class ReverseProxyController {
                         " -> " + server +
                         " | Algorithm: " + algorithm +
                         " | Total Server Requests: " + serverRequestNumber +
-                        " | Active Connections: " + active
+                        " | Active Connections: " + active +
+                        " | Breaker: " + breakers[selectedServer].getState()
         );
+
+        int finalSelectedServer = selectedServer;
 
         try {
 
-            return webClient
+            String result = webClient
                     .get()
                     .uri(server + "/hello")
                     .retrieve()
                     .bodyToMono(String.class)
+                    .timeout(Duration.ofSeconds(7))
                     .block();
+
+            breakers[finalSelectedServer].recordSuccess();
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+
+            breakers[finalSelectedServer].recordFailure();
+            System.out.println(
+                    "Request #" + requestNumber + " FAILED on " + server +
+                            " | Breaker now: " + breakers[finalSelectedServer].getState()
+            );
+            return ResponseEntity.status(502).body("Backend " + server + " failed: " + e.getMessage());
 
         } finally {
 
             // Request finished, decrease active connections
             int remaining =
-                    activeConnections[selectedServer].decrementAndGet();
+                    activeConnections[finalSelectedServer].decrementAndGet();
 
             System.out.println(
                     "Request #" + requestNumber +
@@ -168,8 +225,9 @@ public class ReverseProxyController {
     }
 
 
+
     // =========================================================
-    // STATISTICS
+    // STATISTICS — HTML VERSION (unchanged from your original)
     // =========================================================
 
     @GetMapping("/stats")
@@ -288,5 +346,33 @@ public class ReverseProxyController {
                 serverRequests[2].get(),
                 activeConnections[2].get()
         );
+    }
+
+
+    // =========================================================
+    // STATISTICS — JSON VERSION (for the live graph page)
+    // =========================================================
+
+    @GetMapping("/stats/json")
+    public Map<String, Object> statsJson() {
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("totalRequests", totalRequests.get());
+        data.put("rateLimited", rateLimitedCount.get());
+        data.put("allServersDown", allServersDownCount.get());
+
+        data.put("server1", serverStatsMap(0));
+        data.put("server2", serverStatsMap(1));
+        data.put("server3", serverStatsMap(2));
+
+        return data;
+    }
+
+    private Map<String, Object> serverStatsMap(int index) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("requests", serverRequests[index].get());
+        map.put("active", activeConnections[index].get());
+        map.put("breakerState", breakers[index].getState().toString());
+        return map;
     }
 }
